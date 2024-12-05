@@ -2,6 +2,9 @@ from django.shortcuts import render,redirect
 from .models import Product,Category,Profile
 from django.contrib.auth import authenticate,login,logout
 from django.contrib import messages
+import requests
+from django.shortcuts import render
+from django.http import JsonResponse
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from .forms import SignUpForm,UpdateUserForm,ChangePasswordForm,UserInfoForm
@@ -11,6 +14,12 @@ from django import forms
 from django.db.models import Q
 import json
 from cart.cart import Cart
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from rest_framework import status
+
+#from .serializers import ProductSerializer
+
 def search(request):
     #determine if they filled out the form
     if request.method == "POST":
@@ -165,3 +174,42 @@ def register_user(request):
     else:
        return render(request,'register.html',{'form':form})
 
+
+# URL of the external API you want to use
+EXTERNAL_API_URL = 'https://openlibrary.org/search.json'
+
+# If the API requires an API key, you can add it here
+API_KEY = 'your-api-key-here'
+def fetch_external_products(request):
+    try:
+        # Make the GET request to the external API
+        response = requests.get(EXTERNAL_API_URL, headers={'Authorization': f'Bearer {API_KEY}'})
+
+        if response.status_code == 200:
+            # Parse the data if the request is successful
+            data = response.json()  # Assuming JSON response from the API
+            
+            # Extract product details and map them to a dictionary (adjust based on the API's response structure)
+            products = []
+            
+            # Assuming the API returns a 'docs' key for the list of books
+            if 'docs' in data:
+                for item in data['docs']:  # Assuming the external API has a 'docs' key for books
+                    product, created = Product.objects.get_or_create(
+                        name=item.get('title', 'Unknown'),  # Use 'title' or provide a fallback
+                        defaults={'description': item.get('first_publish_year', 'No description available'),
+                                  'price': item.get('price', 0),  # Assuming price info is available
+                                  'image': item.get('cover_id', '')},  # Assuming image info is available
+                    )
+                    if created:
+                        products.append(product)
+            
+            # Pass the products to a template for rendering
+            return render(request, 'store/external_products.html', {'products': products})
+
+        else:
+            return JsonResponse({'error': 'Failed to fetch products from external API'}, status=500)
+
+    except requests.exceptions.RequestException as e:
+        # Handle request exceptions
+        return JsonResponse({'error': str(e)}, status=500)
