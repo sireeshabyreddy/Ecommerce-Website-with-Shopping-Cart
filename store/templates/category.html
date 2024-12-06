@@ -25,7 +25,11 @@
                                 <div class="badge bg-black text-white position-absolute" style="top:0.5rem;right:0.5rem">Sale</div>
 
                                 <!-- Product image-->
-                                <img class="card-img-top" src="{{product.image.url}}" />
+                                {% if product.image %}
+                <img class="card-img-top" src="{{ product.image.url }}" alt="{{ product.name }}">
+            {% else %}
+                <img class="card-img-top" src="/media/uploads/product/Mother_and_Daughter.jpeg" >
+            {% endif %}
                                 <!-- Product details-->              
                                 <div class="card-body p-4">
                                     <div class="text-center">

@@ -15,5 +15,5 @@ urlpatterns=[
     path('category_summary/',views.category_summary,name='category_summary'),
     path('search/',views.search,name='search'),
     #path('add-product/', add_product, name='add_product'),
-    path('external-products/', views.fetch_external_products, name='fetch_external_products'),
+    #path('external-products/', views.fetch_and_add_products, name='fetch_and_add_products'),
 ]

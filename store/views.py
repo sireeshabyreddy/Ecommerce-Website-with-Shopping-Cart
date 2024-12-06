@@ -97,17 +97,22 @@ def category_summary(request):
     return render(request,'category_summary.html',{'categories':categories})
 
 
-def category(request,foo):
-    foo=foo.replace('-',' ')
-    #grab the category from the url
-    try:
-        category=Category.objects.get(name=foo)
-        products=Product.objects.filter(category=category)
-        return render(request,'category.html',{'products':products,'category':category})
-
-    except:
-        messages.success(request,("Category doesnot exist"))
+def category(request, foo):
+    foo = foo.replace('-', ' ')  # Replace dash with space for the category name
+    print(f"Looking for category: {foo}")  # Debugging log
+    
+    # Use filter() instead of get() to handle multiple categories
+    categories = Category.objects.filter(name=foo)
+    
+    if categories.exists():
+        # If multiple categories exist with the same name, you can handle them as needed.
+        # For now, we'll assume you're displaying all products from all matching categories.
+        products = Product.objects.filter(category__in=categories)
+        return render(request, 'category.html', {'products': products, 'categories': categories})
+    else:
+        messages.error(request, "Category does not exist.")
         return redirect('home')
+
 
 def product(request,pk):
     product=Product.objects.get(id=pk)
@@ -174,42 +179,3 @@ def register_user(request):
     else:
        return render(request,'register.html',{'form':form})
 
-
-# URL of the external API you want to use
-EXTERNAL_API_URL = 'https://openlibrary.org/search.json'
-
-# If the API requires an API key, you can add it here
-API_KEY = 'your-api-key-here'
-def fetch_external_products(request):
-    try:
-        # Make the GET request to the external API
-        response = requests.get(EXTERNAL_API_URL, headers={'Authorization': f'Bearer {API_KEY}'})
-
-        if response.status_code == 200:
-            # Parse the data if the request is successful
-            data = response.json()  # Assuming JSON response from the API
-            
-            # Extract product details and map them to a dictionary (adjust based on the API's response structure)
-            products = []
-            
-            # Assuming the API returns a 'docs' key for the list of books
-            if 'docs' in data:
-                for item in data['docs']:  # Assuming the external API has a 'docs' key for books
-                    product, created = Product.objects.get_or_create(
-                        name=item.get('title', 'Unknown'),  # Use 'title' or provide a fallback
-                        defaults={'description': item.get('first_publish_year', 'No description available'),
-                                  'price': item.get('price', 0),  # Assuming price info is available
-                                  'image': item.get('cover_id', '')},  # Assuming image info is available
-                    )
-                    if created:
-                        products.append(product)
-            
-            # Pass the products to a template for rendering
-            return render(request, 'store/external_products.html', {'products': products})
-
-        else:
-            return JsonResponse({'error': 'Failed to fetch products from external API'}, status=500)
-
-    except requests.exceptions.RequestException as e:
-        # Handle request exceptions
-        return JsonResponse({'error': str(e)}, status=500)
